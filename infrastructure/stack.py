@@ -9,7 +9,8 @@ from aws_cdk import (
     aws_cloudfront as cloudfront,
     aws_cloudfront_origins as origins,
     aws_secretsmanager as secretsmanager,
-    RemovalPolicy
+    RemovalPolicy,
+    CfnOutput
 )
 from constructs import Construct
 
@@ -115,15 +116,23 @@ class InfrastructureStack(Stack):
         # Allow the Fargate service to access the DynamoDB table
         table.grant_read_write_data(fargate_service.task_definition.task_role)
 
-        # Create a CloudFront distribution for the S3 bucket
+        # Create a CloudFront distribution pointing to the ALB
         distribution = cloudfront.Distribution(self, "MyDistribution",
                                                default_behavior={
-                                                   "origin": origins.S3BucketOrigin(bucket)
+                                                   "origin": origins.LoadBalancerV2Origin(fargate_service.load_balancer),
+                                                   "viewer_protocol_policy": cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+                                                   "allowed_methods": cloudfront.AllowedMethods.ALLOW_ALL, # Allow POST, DELETE etc.
+                                                   "cache_policy": cloudfront.CachePolicy.CACHING_DISABLED # Disable caching for dynamic app
                                                })
 
-        # Security group for the Fargate service
-        fargate_service.service.connections.security_groups[0].add_ingress_rule(
-            peer=ec2.Peer.any_ipv4(),
-            connection=ec2.Port.tcp(80),
-            description="Allow HTTP traffic from anywhere"
-        )
+        # Remove direct access rule (traffic should go via CloudFront)
+        # fargate_service.service.connections.security_groups[0].add_ingress_rule(
+        #     peer=ec2.Peer.any_ipv4(),
+        #     connection=ec2.Port.tcp(80),
+        #     description="Allow HTTP traffic from anywhere"
+        # )
+
+        # Output the CloudFront distribution domain name
+        CfnOutput(self, "DistributionDomainName",
+                  value=distribution.distribution_domain_name,
+                  description="The domain name of the CloudFront distribution")
