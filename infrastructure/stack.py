@@ -125,12 +125,12 @@ class InfrastructureStack(Stack):
                                                    "cache_policy": cloudfront.CachePolicy.CACHING_DISABLED # Disable caching for dynamic app
                                                })
 
-        # Remove direct access rule (traffic should go via CloudFront)
-        # fargate_service.service.connections.security_groups[0].add_ingress_rule(
-        #     peer=ec2.Peer.any_ipv4(),
-        #     connection=ec2.Port.tcp(80),
-        #     description="Allow HTTP traffic from anywhere"
-        # )
+        # Allow traffic from anywhere to the ALB (CloudFront needs this)
+        fargate_service.service.connections.security_groups[0].add_ingress_rule(
+            peer=ec2.Peer.any_ipv4(),
+            connection=ec2.Port.tcp(80),
+            description="Allow HTTP traffic from anywhere (including CloudFront)"
+        )
 
         # Output the CloudFront distribution domain name
         CfnOutput(self, "DistributionDomainName",
