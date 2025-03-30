@@ -78,7 +78,26 @@ class InfrastructureStack(Stack):
                                                                              memory_limit_mib=512,
                                                                              desired_count=2,
                                                                              task_image_options={
-                                                                                 "image": ecs.ContainerImage.from_asset("../"),
+                                                                                 "image": ecs.ContainerImage.from_asset(
+                                                                                     "../",
+                                                                                     exclude=[
+                                                                                         "cdk.out",          # CDK output directory
+                                                                                         ".git",             # Git repository data
+                                                                                         ".github",          # GitHub Actions workflows
+                                                                                         ".idea",            # IDE configuration
+                                                                                         "infrastructure",   # CDK infrastructure code
+                                                                                         "README.md",        # Documentation
+                                                                                         "aws-fargate-deployment.md", # Documentation
+                                                                                         "aws-oidc-setup.md",  # Documentation
+                                                                                         "docker-compose.yml", # Local development config
+                                                                                         ".dockerignore",    # Docker build instructions (not needed in final image)
+                                                                                         ".gitignore",       # Git ignore rules
+                                                                                         ".env.example",     # Example environment file
+                                                                                         ".env.template",    # Template environment file
+                                                                                         "voice-recorder.service", # Systemd service file
+                                                                                         "~"                 # Stray directory?
+                                                                                     ]
+                                                                                 ),
                                                                                  "execution_role": task_execution_role,
                                                                                  "task_role": task_role,
                                                                                  "container_port": 5001,  # Match the port in your Dockerfile
