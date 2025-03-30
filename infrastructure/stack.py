@@ -10,7 +10,8 @@ from aws_cdk import (
     aws_cloudfront_origins as origins,
     aws_secretsmanager as secretsmanager,
     RemovalPolicy,
-    CfnOutput
+    CfnOutput,
+    Duration
 )
 from constructs import Construct
 
@@ -124,7 +125,7 @@ class InfrastructureStack(Stack):
                                                        protocol_policy=cloudfront.OriginProtocolPolicy.HTTP_ONLY,
                                                        http_port=80,
                                                        connection_attempts=3,
-                                                       connection_timeout=10
+                                                       connection_timeout=Duration.seconds(10)
                                                    ),
                                                    "viewer_protocol_policy": cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                                                    "allowed_methods": cloudfront.AllowedMethods.ALLOW_ALL, # Allow POST, DELETE etc.
