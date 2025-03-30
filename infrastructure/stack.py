@@ -78,7 +78,7 @@ class InfrastructureStack(Stack):
                                                                              memory_limit_mib=512,
                                                                              desired_count=2,
                                                                              task_image_options={
-                                                                                 "image": ecs.ContainerImage.from_asset("../"),  # Point to root directory where Dockerfile is
+                                                                                 "image": ecs.ContainerImage.from_asset("./"),
                                                                                  "execution_role": task_execution_role,
                                                                                  "task_role": task_role,
                                                                                  "container_port": 5001,  # Match the port in your Dockerfile
