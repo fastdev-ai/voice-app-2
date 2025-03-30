@@ -8,6 +8,7 @@ from aws_cdk import (
     aws_s3 as s3,
     aws_cloudfront as cloudfront,
     aws_cloudfront_origins as origins,
+    aws_secretsmanager as secretsmanager,
     RemovalPolicy
 )
 from constructs import Construct
@@ -65,6 +66,11 @@ class InfrastructureStack(Stack):
                                  iam.ManagedPolicy.from_aws_managed_policy_name("AmazonS3FullAccess")
                              ])
 
+        # Reference the existing OpenAI API key secret
+        openai_api_key_secret = secretsmanager.Secret.from_secret_name_v2(
+            self, "OpenAIAPIKeySecret", "OPENAI_API_KEY"
+        )
+
         # Create an Application Load Balanced Fargate Service
         fargate_service = ecs_patterns.ApplicationLoadBalancedFargateService(self, "MyFargateService",
                                                                              cluster=cluster,
@@ -72,9 +78,18 @@ class InfrastructureStack(Stack):
                                                                              memory_limit_mib=512,
                                                                              desired_count=2,
                                                                              task_image_options={
-                                                                                 "image": ecs.ContainerImage.from_asset("./"),
+                                                                                 "image": ecs.ContainerImage.from_asset("../"),  # Point to root directory where Dockerfile is
                                                                                  "execution_role": task_execution_role,
                                                                                  "task_role": task_role,
+                                                                                 "container_port": 5001,  # Match the port in your Dockerfile
+                                                                                 "secrets": {
+                                                                                     "OPENAI_API_KEY": ecs.Secret.from_secrets_manager(openai_api_key_secret)
+                                                                                 },
+                                                                                 "environment": {
+                                                                                     "PORT": "5001",
+                                                                                     "HOST": "0.0.0.0",
+                                                                                     "FLASK_ENV": "production"
+                                                                                 }
                                                                              },
                                                                              public_load_balancer=True)
 
