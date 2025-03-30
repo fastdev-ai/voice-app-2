@@ -108,7 +108,8 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsOIDCRole
-          aws-region: ${{ vars.AWS_REGION || 'us-east-2' }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          audience: sts.amazonaws.com
           
       - name: Download CloudFormation template
         uses: actions/download-artifact@v4
