@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        #recordButton {
+            background-color: #ff4444;
+            color: white;
+        }
+
+        #recordButton.recording {
+            background-color: #cc0000;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        #recordings {
+            margin-top: 30px;
+        }
+
+        .recording-item {
+            background-color: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+
+        .transcript {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .transcript-text {
+            flex-grow: 1;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 5px;
+        }
+
+        .copy-button, .delete-button {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            color: white;
+        }
+
+        .copy-button {
+            background-color: #6c757d;
+        }
+
+        .delete-button {
+            background-color: #dc3545;
+        }
+
+        .copy-button:hover {
+            background-color: #5a6268;
+        }
+
+        .delete-button:hover {
+            background-color: #c82333;
+        }
+
+        .copy-button.copied {
+            background-color: #28a745;
+        }
+
+        .status {
+            text-align: center;
+            margin: 10px 0;
+            color: #666;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .loading::after {
+            content: "⏳";
+            animation: loading 1s infinite;
+        }
+
+        @keyframes loading {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .cost-info {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .total-cost {
+            text-align: right;
+            padding: 10px;
+            font-weight: bold;
+            border-top: 1px solid #dee2e6;
+            margin-top: 20px;
+        }
+
+        .recording-duration {
+            display: inline-block;
+            margin-left: 10px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>{{ title }}</h1>
+        
+        <div class="controls">
+            <button id="recordButton">Start Recording</button>
+            <span id="recordingDuration" class="recording-duration"></span>
+        </div>
+        
+        <div id="status" class="status"></div>
+        <div id="loading" class="loading"></div>
+        
+        <div id="recordings"></div>
+        
+        <div id="totalCost" class="total-cost">
+            Total Cost: $<span id="totalCostValue">0.000</span>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let recording = false;
+        let startTime = 0;
+        let recordingDuration = 0;
+        let durationInterval;
+        
+        async function setupRecorder() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    await uploadAudio(audioBlob);
+                };
+
+            } catch (err) {
+                console.error('Error accessing microphone:', err);
+                document.getElementById('status').textContent = 'Error: Could not access microphone';
+            }
+        }
+
+        const recordButton = document.getElementById('recordButton');
+        const status = document.getElementById('status');
+        const loading = document.getElementById('loading');
+        const recordings = document.getElementById('recordings');
+
+        recordButton.addEventListener('click', () => {
+            if (!recording) {
+                startRecording();
+            } else {
+                stopRecording();
+            }
+        });
+
+        function updateRecordingDuration() {
+            if (!recording) return 0;
+            recordingDuration = (Date.now() - startTime) / 1000;
+            const minutes = Math.floor(recordingDuration / 60);
+            const seconds = Math.floor(recordingDuration % 60);
+            document.getElementById('recordingDuration').textContent = 
+                `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            return recordingDuration;
+        }
+
+        function startRecording() {
+            recording = true;
+            audioChunks = [];
+            mediaRecorder.start();
+            recordButton.textContent = 'Stop Recording';
+            recordButton.classList.add('recording');
+            startTime = Date.now();
+            recordingDuration = 0;
+            document.getElementById('recordingDuration').textContent = '0:00';
+            durationInterval = setInterval(updateRecordingDuration, 1000);
+        }
+
+        function stopRecording() {
+            recording = false;
+            mediaRecorder.stop();
+            recordButton.textContent = 'Start Recording';
+            recordButton.classList.remove('recording');
+            clearInterval(durationInterval);
+            // Keep the final duration displayed
+            updateRecordingDuration();
+        }
+
+        async function uploadAudio(audioBlob) {
+            const loading = document.getElementById('loading');
+            loading.style.display = 'block';
+            
+            const formData = new FormData();
+            formData.append('audio', audioBlob);
+            formData.append('duration', recordingDuration);  // Use the stored duration
+            
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    addRecordingToList(data.filename, data.transcript, data.duration, data.cost);
+                    updateTotalCost(data.total_cost);
+                } else {
+                    alert('Upload failed: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Upload failed:', error);
+                alert('Upload failed: ' + error.message);
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function formatDuration(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = Math.floor(seconds % 60);
+            return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+
+        function createNotification(message) {
+            const notification = document.createElement('div');
+            notification.style.position = 'fixed';
+            notification.style.top = '20px';
+            notification.style.right = '20px';
+            notification.style.backgroundColor = '#4CAF50';
+            notification.style.color = 'white';
+            notification.style.padding = '15px';
+            notification.style.borderRadius = '5px';
+            notification.style.zIndex = '1000';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        }
+
+        async function copyToClipboard(text) {
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(text);
+                    createNotification('Copied to clipboard!');
+                    return true;
+                } else {
+                    // Fallback for non-HTTPS or when clipboard API is not available
+                    const textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    textArea.style.position = 'fixed';
+                    textArea.style.left = '-999999px';
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    try {
+                        document.execCommand('copy');
+                        textArea.remove();
+                        createNotification('Copied to clipboard!');
+                        return true;
+                    } catch (error) {
+                        console.error('Fallback: Error copying text: ', error);
+                        textArea.remove();
+                        return false;
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to copy text to clipboard: ', err);
+                return false;
+            }
+        }
+
+        // Get confirmation setting from server-side template
+        const confirmDelete = JSON.parse('{{ confirm_delete|tojson }}');
+
+        async function addRecordingToList(filename, transcript, duration, cost) {
+            // Try to copy to clipboard immediately
+            await copyToClipboard(transcript);
+
+            const recordingsList = document.getElementById('recordings');
+            const recordingItem = document.createElement('div');
+            recordingItem.className = 'recording-item';
+            
+            const audioElement = document.createElement('audio');
+            audioElement.controls = true;
+            audioElement.src = `/recordings/${filename}`;
+            
+            const transcriptDiv = document.createElement('div');
+            transcriptDiv.className = 'transcript';
+            
+            const transcriptText = document.createElement('div');
+            transcriptText.className = 'transcript-text';
+            transcriptText.textContent = transcript;
+            
+            const buttonGroup = document.createElement('div');
+            buttonGroup.className = 'button-group';
+
+            const copyButton = document.createElement('button');
+            copyButton.className = 'copy-button';
+            copyButton.textContent = 'Copy';
+            copyButton.onclick = async () => {
+                await copyToClipboard(transcript);
+            };
+
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'delete-button';
+            deleteButton.textContent = 'Delete';
+            deleteButton.onclick = async () => {
+                const proceed = !confirmDelete || confirm('Are you sure you want to delete this recording?');
+                if (proceed) {
+                    try {
+                        console.log('Attempting to delete:', filename);
+                        const response = await fetch(`/delete/${filename}`, {
+                            method: 'DELETE'
+                        });
+                        console.log('Delete response:', response);
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            console.log('Delete successful, data:', data);
+                            recordingItem.remove();
+                            updateTotalCost(data.total_cost);
+                        } else {
+                            const data = await response.json();
+                            console.error('Server error on delete:', data);
+                            alert('Failed to delete recording: ' + (data.error || 'Unknown error'));
+                        }
+                    } catch (err) {
+                        console.error('Error during delete:', err);
+                        alert('Failed to delete recording: ' + err.message);
+                    }
+                }
+            };
+            
+            const costInfo = document.createElement('div');
+            costInfo.className = 'cost-info';
+            costInfo.textContent = `Duration: ${formatDuration(duration)} | Cost: $${cost.toFixed(3)}`;
+            
+            buttonGroup.appendChild(copyButton);
+            buttonGroup.appendChild(deleteButton);
+            
+            transcriptDiv.appendChild(transcriptText);
+            transcriptDiv.appendChild(buttonGroup);
+            
+            recordingItem.appendChild(audioElement);
+            recordingItem.appendChild(transcriptDiv);
+            recordingItem.appendChild(costInfo);
+            
+            recordingsList.insertBefore(recordingItem, recordingsList.firstChild);
+        }
+
+        function updateTotalCost(totalCost) {
+            document.getElementById('totalCostValue').textContent = totalCost.toFixed(3);
+        }
+
+        // Initialize the recorder when the page loads
+        setupRecorder();
+    </script>
+</body>
+</html>

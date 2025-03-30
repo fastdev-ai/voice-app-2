@@ -1,0 +1,14 @@
+[Unit]
+Description=Voice Recorder Web Application
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/TOOLS/voice-app
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 %h/TOOLS/voice-app/app.py
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

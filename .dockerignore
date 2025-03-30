@@ -1,0 +1,38 @@
+# Version control
+.git
+.gitignore
+
+# Environment files that might contain secrets
+.env
+.env.*
+!.env.template
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# User recordings and data
+recordings/
+
+# Docker files
+Dockerfile
+.dockerignore
+
+# Service files
+voice-recorder.service
+
+# Logs
+*.log
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

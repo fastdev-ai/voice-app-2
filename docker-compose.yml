@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  voice-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${PORT:-5001}:${PORT:-5001}"
+    environment:
+      - PORT=${PORT:-5001}
+      - HOST=0.0.0.0
+      - FLASK_DEBUG=${FLASK_DEBUG:-false}
+      - FLASK_ENV=${FLASK_ENV:-production}
+      - UPLOAD_FOLDER=${UPLOAD_FOLDER:-/app/recordings}
+      - COST_PER_MINUTE=${COST_PER_MINUTE:-0.006}
+      - CONFIRM_DELETE=${CONFIRM_DELETE:-false}
+      - TITLE=${TITLE:-Voice Input}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    volumes:
+      - recordings:/app/recordings
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${PORT:-5001}/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  recordings:
+    # This volume persists recordings between container restarts
