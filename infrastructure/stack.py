@@ -119,10 +119,17 @@ class InfrastructureStack(Stack):
         # Create a CloudFront distribution pointing to the ALB
         distribution = cloudfront.Distribution(self, "MyDistribution",
                                                default_behavior={
-                                                   "origin": origins.LoadBalancerV2Origin(fargate_service.load_balancer),
+                                                   "origin": origins.LoadBalancerV2Origin(
+                                                       fargate_service.load_balancer,
+                                                       protocol_policy=cloudfront.OriginProtocolPolicy.HTTP_ONLY,
+                                                       http_port=80,
+                                                       connection_attempts=3,
+                                                       connection_timeout=10
+                                                   ),
                                                    "viewer_protocol_policy": cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                                                    "allowed_methods": cloudfront.AllowedMethods.ALLOW_ALL, # Allow POST, DELETE etc.
-                                                   "cache_policy": cloudfront.CachePolicy.CACHING_DISABLED # Disable caching for dynamic app
+                                                   "cache_policy": cloudfront.CachePolicy.CACHING_DISABLED, # Disable caching for dynamic app
+                                                   "origin_request_policy": cloudfront.OriginRequestPolicy.ALL_VIEWER
                                                })
 
         # Allow traffic from anywhere to the ALB (CloudFront needs this)
