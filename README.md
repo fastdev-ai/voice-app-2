@@ -88,6 +88,16 @@ Example costs:
 
 For deploying to AWS Fargate, see the detailed instructions in [aws-fargate-deployment.md](aws-fargate-deployment.md).
 
+### GitHub Actions CI/CD
+
+This project includes GitHub Actions workflows for continuous integration and deployment to AWS:
+
+1. Automated deployment to AWS when changes are pushed to the main branch
+2. Secure authentication with AWS using OpenID Connect (OIDC)
+3. Environment-specific deployments (dev, staging, prod)
+
+For secure GitHub Actions setup with AWS OIDC authentication, see [aws-oidc-setup.md](aws-oidc-setup.md).
+
 ## Service Management
 
 The application can run as a systemd user service, which means:

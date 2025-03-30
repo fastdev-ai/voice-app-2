@@ -9,8 +9,8 @@ app = App()
 
 # Define the AWS environment (account/region)
 env = Environment(
-    account=os.environ.get("CDK_DEFAULT_ACCOUNT", ""),
-    region=os.environ.get("CDK_DEFAULT_REGION", "us-east-2")
+    account=os.environ.get("CDK_DEFAULT_ACCOUNT") or os.environ.get("AWS_ACCOUNT_ID"),
+    region=os.environ.get("CDK_DEFAULT_REGION") or os.environ.get("AWS_REGION", "us-east-2")
 )
 
 # Instantiate the main infrastructure stack

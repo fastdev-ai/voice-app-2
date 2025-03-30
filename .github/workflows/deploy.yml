@@ -21,6 +21,11 @@ jobs:
     name: CDK Synth
     runs-on: ubuntu-latest
     
+    # Add permissions needed for OIDC authentication
+    permissions:
+      id-token: write  # Required for OIDC
+      contents: read   # Required to check out the repository
+      
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -39,6 +44,7 @@ jobs:
         run: |
           cd infrastructure
           pip install -r requirements.txt
+          pip install awscli
           npm install -g aws-cdk
           
       - name: CDK Synth
@@ -57,6 +63,11 @@ jobs:
     needs: cdk-synth
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment || 'dev' }}-approval
+    # Add permissions needed for OIDC authentication
+    permissions:
+      id-token: write  # Required for OIDC
+      contents: read   # Required to check out the repository
+      
     steps:
       - name: Approve Deployment
         run: echo "Deployment to ${{ github.event.inputs.environment || 'dev' }} has been approved"
@@ -67,6 +78,11 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment || 'dev' }}
     
+    # Add permissions needed for OIDC authentication
+    permissions:
+      id-token: write  # Required for OIDC
+      contents: read   # Required to check out the repository
+      
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -85,14 +101,14 @@ jobs:
         run: |
           cd infrastructure
           pip install -r requirements.txt
+          pip install awscli
           npm install -g aws-cdk
           
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
+          aws-region: ${{ vars.AWS_REGION || 'us-east-2' }}
           
       - name: Download CloudFormation template
         uses: actions/download-artifact@v4

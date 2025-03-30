@@ -29,7 +29,7 @@ class InfrastructureStack(Stack):
                           ),
                           ec2.SubnetConfiguration(
                               name="PrivateSubnet",
-                              subnet_type=ec2.SubnetType.PRIVATE_WITH_NAT,
+                              subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS,
                               cidr_mask=24
                           )
                       ])
@@ -84,7 +84,7 @@ class InfrastructureStack(Stack):
         # Create a CloudFront distribution for the S3 bucket
         distribution = cloudfront.Distribution(self, "MyDistribution",
                                                default_behavior={
-                                                   "origin": origins.S3Origin(bucket)
+                                                   "origin": origins.S3BucketOrigin(bucket)
                                                })
 
         # Security group for the Fargate service
